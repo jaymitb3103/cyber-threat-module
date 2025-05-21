@@ -4,6 +4,10 @@ from logger import log_threat
 
 app = Flask(__name__)
 
+@app.route('/')
+def home():
+    return "Cyber Threat Detection API is Running"
+
 @app.route('/login', methods=['POST'])
 def login():
     data = request.json
