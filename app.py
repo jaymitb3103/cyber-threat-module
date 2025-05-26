@@ -1,39 +1,37 @@
 from flask import Flask, request, jsonify
-from threat_module import detect_threat
-from logger import log_threat
 
 app = Flask(__name__)
 
-@app.route('/')
-def home():
-    return "Cyber Threat Detection API is Running"
-
+# Login route
 @app.route('/login', methods=['POST'])
 def login():
-    data = request.json
-    ip = request.remote_addr
-    threat = detect_threat(data, ip, 'login')
-
-    if threat:
-        log_threat(ip, threat, data)
-        return jsonify({'status': 'threat_detected', 'message': threat}), 403
-
-    if data.get("username") == "admin" and data.get("password") == "admin":
-        return jsonify({'status': 'success'})
+    data = request.get_json()
+    username = data.get("username")
+    password = data.get("password")
+    if username == "admin" and password == "admin":
+        return jsonify({"message": "Login successful"})
     else:
-        return jsonify({'status': 'invalid credentials'}), 401
+        return jsonify({"message": "Invalid credentials"}), 401
 
-@app.route('/upload', methods=['POST'])
-def upload():
-    data = request.json
-    ip = request.remote_addr
-    threat = detect_threat(data, ip, 'upload')
+# Dummy threat indicators
+blacklisted_ips = ["192.168.1.100", "10.0.0.66"]
+suspicious_keywords = ["attack", "malware", "unauthorized", "hack", "breach"]
 
-    if threat:
-        log_threat(ip, threat, data)
-        return jsonify({'status': 'threat_detected', 'message': threat}), 403
+# Threat detection route
+@app.route('/detect-threat', methods=['POST'])
+def detect_threat():
+    data = request.get_json()
+    log = data.get("log", "")
+    ip = data.get("ip", "")
 
-    return jsonify({'status': 'upload successful'})
+    result = {
+        "ip_flagged": ip in blacklisted_ips,
+        "keyword_detected": any(word in log.lower() for word in suspicious_keywords)
+    }
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8080)
+    if result["ip_flagged"] or result["keyword_detected"]:
+        result["status"] = "Threat Detected"
+    else:
+        result["status"] = "Safe"
+
+    return jsonify(result)
